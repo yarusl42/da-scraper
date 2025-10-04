@@ -1,0 +1,6 @@
+venv
+testing
+.vscode
+browser_profile/*
+browser_profile
+browser_profile/
