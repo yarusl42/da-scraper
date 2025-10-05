@@ -85,7 +85,9 @@ def parse_maps_item_soup(container) -> MapsItem:
     # Listing link and name
     a = container.select_one("a.hfpxzc")
     if a:
-        item.listing_link = a.get("href")
+        href = a.get("href", "")
+        if href.startswith("http"):
+            item.listing_link = href
         # aria-label often equals the business name
         item.name = _clean_text(a.get("aria-label"))
 
@@ -178,7 +180,7 @@ def parse_maps_item_soup(container) -> MapsItem:
     # Fallback by data-value
     if not website_a:
         website_a = container.select_one("a[data-value=Website]")
-    if website_a:
+    if website_a and website_a.get("href").startswith("http"):
         item.website = website_a.get("href")
 
     return item

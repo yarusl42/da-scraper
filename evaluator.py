@@ -1,30 +1,24 @@
-from __future__ import annotations
-
-DEBUG = False
-
 import argparse
 import datetime as dt
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Optional, Any
-
+from src.config.base import DEBUG
 import pandas as pd
-import tkinter as tk
-from tkinter import ttk, messagebox
 import json
 import ast
 from playwright.sync_api import sync_playwright, BrowserContext, Page
-
-# --- Paths (aligned with other programs) ---
-PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"
-COMBINED_DIR = DATA_DIR / "combined"
-RESULTS_DIR = DATA_DIR / "results"
-
-
-def safe_print(msg: str) -> None:
-    print(msg, flush=True)
-
+from src.config.base import COMBINED_DIR, RESULTS_DIR, PROJECT_ROOT
+from src.evaluator_gui import (
+    build_gui,
+    set_status_dot,
+    set_notes,
+    get_notes,
+    show_missing_file,
+    show_info_no_website,
+    show_nav_error,
+)
+from src.io_helpers import safe_print
 
 @dataclass
 class EvalRowRef:
@@ -45,12 +39,7 @@ class EvaluatorApp:
         self.current_idx: int = 0
 
         # GUI
-        self.root = tk.Tk()
-        self.root.title("Maps Evaluator")
-        # Set Tkinter window to 520x1000 (WxH)
-        self.root.geometry("520x1000")
-
-        self._build_gui()
+        self.root = build_gui(self, "520x1000")
 
         # Browser
         self.pw = None
@@ -63,100 +52,14 @@ class EvaluatorApp:
         self._init_browser()
         self._show_current()
 
-    # ---------------- GUI -----------------
-    def _build_gui(self) -> None:
-        # Top: Title only
-        top = ttk.Frame(self.root)
-        top.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-
-        self.title_var = tk.StringVar(value="")
-        ttk.Label(top, textvariable=self.title_var, font=("Segoe UI", 14, "bold")).pack(side=tk.LEFT)
-        # Colored status dot (●) next to title (make it bigger)
-        self.status_dot = ttk.Label(top, text="●")
-        try:
-            self.status_dot.configure(font=("Segoe UI", 20, "bold"))
-        except Exception:
-            # Fallback if font family unavailable
-            self.status_dot.configure(font=(None, 20, "bold"))
-        self.status_dot.pack(side=tk.LEFT, padx=(8, 0))
-
-        # Middle: details panel
-        mid = ttk.Frame(self.root)
-        mid.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Left column of labels/values
-        left = ttk.Frame(mid)
-        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        self.fields = {
-            "name": tk.StringVar(),
-            "address": tk.StringVar(),
-            "website": tk.StringVar(),
-            "phone": tk.StringVar(),
-            "reviews_count": tk.StringVar(),
-            "rating": tk.StringVar(),
-            "listing_link": tk.StringVar(),
-            "status": tk.StringVar(),
-            "source_file": tk.StringVar(),
-            "categories": tk.StringVar(),
-            "map_files": tk.StringVar(),
-        }
-
-        def add_row(frame: ttk.Frame, label: str, var: tk.StringVar):
-            row = ttk.Frame(frame)
-            row.pack(fill=tk.X, pady=2)
-            ttk.Label(row, text=f"{label}:", width=16).pack(side=tk.LEFT)
-            ttk.Label(row, textvariable=var, wraplength=450, justify=tk.LEFT).pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        for label, key in [
-            ("Address", "address"),
-            ("Website", "website"),
-            ("Phone", "phone"),
-            ("Reviews", "reviews_count"),
-            ("Rating", "rating"),
-            ("Listing", "listing_link"),
-            ("Status", "status"),
-            ("Source", "source_file"),
-            ("Categories", "categories"),
-            
-            ("Map files", "map_files"),
-        ]:
-            add_row(left, label, self.fields[key])
-
-        # Notes directly under info (under mid)
-        notes_wrap = ttk.Frame(self.root)
-        notes_wrap.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=10, pady=(0, 6))
-        ttk.Label(notes_wrap, text="Notes:").pack(anchor=tk.W)
-        self.notes = tk.Text(notes_wrap, height=6)
-        self.notes.pack(fill=tk.X)
-
-        # Controls directly after Notes
-        controls = ttk.Frame(self.root)
-        controls.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 10))
-        ttk.Button(controls, text="Open Website", command=self._open_current_website).pack(side=tk.LEFT, padx=5)
-        ttk.Button(controls, text="Good", command=lambda: self._rate_and_next("good")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(controls, text="Okay", command=lambda: self._rate_and_next("okay")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(controls, text="Bad", command=lambda: self._rate_and_next("bad")).pack(side=tk.LEFT, padx=5)
-        ttk.Button(controls, text="Skip", command=self._skip).pack(side=tk.LEFT, padx=5)
-        ttk.Button(controls, text="Next", command=self._next).pack(side=tk.LEFT, padx=5)
-
-        # Copy controls for quick clipboard access
-        copybar = ttk.Frame(self.root)
-        copybar.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(0, 6))
-        ttk.Button(copybar, text="Copy Link", command=lambda: self._copy_field("listing_link")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(copybar, text="Copy Phone", command=lambda: self._copy_field("phone")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(copybar, text="Copy Address", command=lambda: self._copy_field("address")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(copybar, text="Copy Source", command=lambda: self._copy_field("source_file")).pack(side=tk.LEFT, padx=4)
-        ttk.Button(copybar, text="Copy Map Files", command=lambda: self._copy_field("map_files")).pack(side=tk.LEFT, padx=4)
-
-        # No keyboard shortcuts for control or copy actions per request
+    # ---------------- GUI (moved to src/evaluator_gui.py) -----------------
 
     # ---------------- Data & Browser -----------------
     def _load_inputs(self) -> None:
         self.rows.clear()
         for i, p in enumerate(self.file_paths):
             if not p.exists():
-                messagebox.showerror("Missing file", f"Not found: {p}")
+                show_missing_file(p)
                 continue
             df = pd.read_excel(p)
             # Optional filtering by status (pending|good|bad|okay) applied to the parent combined file
@@ -292,13 +195,10 @@ class EvaluatorApp:
         prev = self._load_existing_eval(ref)
         if prev is not None:
             # Notes
-            self.notes.delete("1.0", tk.END)
             prev_notes = str(prev.get("notes") or "")
-            if prev_notes:
-                self.notes.insert("1.0", prev_notes)
+            set_notes(self, prev_notes)
         else:
-            # Clear notes when no previous
-            self.notes.delete("1.0", tk.END)
+            set_notes(self, "")
 
         # Update status dot color (by saved eval_rating, else by current status)
         rating_tag = None
@@ -306,7 +206,7 @@ class EvaluatorApp:
             rating_tag = str(prev.get("eval_rating") or "").strip().lower()
         if not rating_tag:
             rating_tag = str(d.get("status") or "").strip().lower()
-        self._set_status_dot(rating_tag)
+        set_status_dot(self.status_dot, rating_tag)
 
         # Auto-open website if available
         self._open_current_website(auto=True)
@@ -320,14 +220,14 @@ class EvaluatorApp:
         url = (ref.data.get("website") or "").strip()
         if not url:
             if not auto:
-                messagebox.showinfo("No Website", "This row has no website URL.")
+                show_info_no_website()
             return
         try:
             self.page.goto(url, timeout=30000)
         except Exception as e:
             safe_print(f"[!] Failed to open website: {e}")
             if not auto:
-                messagebox.showerror("Navigation Error", str(e))
+                show_nav_error(e)
 
     def _rate_and_next(self, rating: str) -> None:
         self._save_current_result(rating)
@@ -347,7 +247,7 @@ class EvaluatorApp:
         ref = self._current_row()
         if ref is None:
             return
-        notes_text = self.notes.get("1.0", tk.END).strip()
+        notes_text = get_notes(self)
         eval_time = dt.datetime.now().isoformat(timespec="seconds")
 
         # Append to results file for the corresponding input file
@@ -387,63 +287,7 @@ class EvaluatorApp:
         # Return the last (most recent) match
         return matches.iloc[-1].to_dict()
 
-    def _set_status_dot(self, rating_tag: str) -> None:
-        color = "grey"
-        if rating_tag == "good":
-            color = "green"
-        elif rating_tag == "okay":
-            color = "orange"
-        elif rating_tag == "bad":
-            color = "red"
-        self.status_dot.configure(foreground=color)
-
-    def _copy_field(self, key: str) -> None:
-        ref = self._current_row()
-        if ref is None:
-            return
-        val = ref.data.get(key)
-        if key == "map_files":
-            # Copy the raw file map list (one per line), not the formatted display
-            v = ref.data.get("map_files")
-            files_list = []
-            if isinstance(v, list):
-                files_list = v
-            elif isinstance(v, str):
-                s = v.strip()
-                if s:
-                    try:
-                        parsed = json.loads(s)
-                        files_list = parsed if isinstance(parsed, list) else [s]
-                    except Exception:
-                        try:
-                            parsed = ast.literal_eval(s)
-                            files_list = list(parsed) if isinstance(parsed, (list, tuple)) else [s]
-                        except Exception:
-                            files_list = [s]
-            elif v is not None:
-                files_list = [v]
-            text = "\n".join(str(x) for x in files_list)
-        elif isinstance(val, list):
-            text = ", ".join(str(x) for x in val)
-        else:
-            text = str(val or "")
-        try:
-            self.root.clipboard_clear()
-            self.root.clipboard_append(text)
-            # brief visual hint in title
-            self.title_var.set(f"Copied {key} to clipboard")
-            self.root.after(1200, lambda: self._refresh_title())
-        except Exception:
-            pass
-
-    def _refresh_title(self) -> None:
-        ref = self._current_row()
-        if ref is None:
-            self.title_var.set("All done!")
-            return
-        d = ref.data
-        title = f"[{self.current_idx + 1}/{len(self.rows)}] {d.get('name') or ''}"
-        self.title_var.set(title)
+    # _set_status_dot, _copy_field, _refresh_title moved to evaluator_gui helpers
 
     def _update_parent_status(self, rating: str) -> None:
         ref = self._current_row()
@@ -521,7 +365,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         files = args.files
         filter_status = args.filter
     else:
-        files = "metal_fabrication_denver_@39_8801791_-105_2843769_10__welders_in_denver_@39_8801791_-105_2843769_10z.xlsx"
+        files = "combined_4_25c77f6ea7.xlsx"
         filter_status = None
     return run(files, filter_status)
 

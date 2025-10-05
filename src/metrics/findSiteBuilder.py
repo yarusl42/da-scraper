@@ -1,14 +1,13 @@
 SITE_BUILDERS = {
-    "WordPress": ["/wp-content/", "/wp-includes/", "wp-json"],
+    "WordPress": ["/wp-content/", "/wp-includes/"],
     "Wix": ["wix.com", "static.wixstatic.com", "wixsite.com", "wixstatic.com"],
     "Carrd": ["carrd.co", "cdn.carrd.co"],
     "Squarespace": ["squarespace.com", "static.squarespace.com", "squarespace-cdn.com"],
     "Weebly": ["weebly.com", "cdn.weebly.com"],
     "Shopify": ["myshopify.com", "cdn.shopify.com", "Shopify.theme"],
-    "Joomla": ["/components/", "/templates/", "/media/"],
-    "Drupal": ["/sites/", "drupalSettings"],
+    "Drupal": ["drupalSettings"],
     "BigCommerce": ["cdn.bigcommerce.com", "Bigcommerce"],
-    "Webflow": ["webflow.com", "uploads/", "w-dyn"],
+    "Webflow": ["webflow.com"],
     "Duda": ["dudamobile.com", "duda.co", "duda.io"],
     "Jimdo": ["jimdo.com", "site.jimdo.com"],
     "SITE123": ["site123.com", "cdn.site123.me"],
@@ -18,7 +17,6 @@ SITE_BUILDERS = {
     "IMCreator": ["imcreator.com", "imcreatorcdn.com"],
     "GoDaddy Website Builder": ["godaddy.com", "godaddysites.com"],
     "Strikingly": ["strikingly.com", "cdn.strikingly.com"],
-    "Elementor": ["elementor"],
     "Oxygen": ["oxygen"]
 }
 

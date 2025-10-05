@@ -1,6 +1,3 @@
-from __future__ import annotations
-DEBUG = False
-
 import argparse
 import hashlib
 from pathlib import Path
@@ -8,6 +5,7 @@ from typing import List, Dict, Any
 import json as _json
 import ast as _ast
 import pandas as pd
+from src.config.base import DEBUG
 
 # Project paths (align with scraper.py)
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -380,7 +378,7 @@ def main() -> int:
         files = args.files
         min_rating = args.min_rating
     else:
-        files = "metal_fabrication_denver_@39_8801791_-105_2843769_10.xlsx,welders_in_denver_@39_8801791_-105_2843769_10z.xlsx"
+        files = "attic_insulation_denver_@39_7400428_-105_0508011_11z.xlsx,insulation_companies_denver_@39_7400428_-105_0508011_11z.xlsx,insulation_denver_colorado_@39_7400428_-105_0508011_11z.xlsx,spray_foam_insulation_denver_@39_7400428_-105_0508011_11z.xlsx"
         min_rating = 4.2
     return run(files, min_rating)
 
