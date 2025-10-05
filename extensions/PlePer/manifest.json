@@ -1,0 +1,31 @@
+{
+   "action": {
+      "default_icon": "Logo.png",
+      "default_popup": "options.html",
+      "default_title": "PlePer Local SEO Extension"
+   },
+   "background": {
+      "service_worker": "background.js"
+   },
+   "content_scripts": [ {
+      "js": [ "includes/listener.js", "includes/purify.js" ],
+      "matches": [ "https://*/*", "http://*/*" ],
+      "run_at": "document_end"
+   } ],
+   "description": "Useful shortcuts and quick analyzes for Local SEO`s",
+   "icons": {
+      "128": "Logo.png",
+      "16": "Logo.png",
+      "48": "Logo.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkec1k32B1pq8asYyQZOW66RvyDFifnx3ZGENbvhlYkZNjk2ACcTmxKNw0g5eGrWw0XSUeEX0g6THbiyW6WPGCybY3Sc4WdHM8P4BvsC1h1o/GXKKFvy2zo5SyzTVy5PqtySlnxr3QdTMH8zeCpb+IACVOZlPlMSh55KzZXPC1e0WJaX5VA9fJJkmZw4I61ORaYyUW0uu3+VB/TxqUeHFOVKXgoXjywDH4YslBcuhAZFjbgzUSxEw7jUypd3Hz8B74yGCspixV06zLh96AvEdE3eKbyIKRtT9jodss0Zg94Hu/iCdCrVQitijqe5zs0t+FVV6H3kO7MVRsOC8FstlgwIDAQAB",
+   "manifest_version": 3,
+   "name": "PlePer Local SEO Tools",
+   "permissions": [ "contextMenus", "activeTab", "storage", "scripting" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.4.3",
+   "web_accessible_resources": [ {
+      "matches": [ "*://*/*" ],
+      "resources": [ "includes/xhr.js", "includes/near_by_search.js" ]
+   } ]
+}

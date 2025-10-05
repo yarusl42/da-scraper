@@ -23,6 +23,7 @@ MAPS_DIR = DATA_DIR / "maps"
 PROFILE_DIR = PROJECT_ROOT / "browser_profile"
 EXTENSIONS_DIR = PROJECT_ROOT / "extensions"
 GBP_EVERYWHERE_DIR = EXTENSIONS_DIR / "gbp-everywhere"
+PLEPER_DIR = EXTENSIONS_DIR / "PlePer"
 DEBUG_DIR = DATA_DIR / "debug"
 
 
