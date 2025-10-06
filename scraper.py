@@ -15,6 +15,11 @@ def normalize_status(value: Optional[str]) -> str:
         return ""
     return str(value).strip().lower()
 
+def to_integer(s, default):
+    try:
+        return int(s)
+    except ValueError:
+        return default
 
 def should_process_row(status_value: Optional[str], rescrape: bool) -> Tuple[bool, str]:
     """Return (should_process, reason)."""
@@ -26,19 +31,153 @@ def should_process_row(status_value: Optional[str], rescrape: bool) -> Tuple[boo
     # empty, pending, error, or anything else -> process
     return True, "pending/error/empty"
 
+def click_on_the_listing(item):
+    # Click interactive child or container
+    clickable = item.locator(".hfpxzc").first
+    for _ in range(20):
+        try:
+            if clickable.get_attribute("jsaction"):
+                clickable.click(timeout=5000)
+                return True
+        except Exception:
+            pass
+        try:
+            item.click(timeout=5000)
+            break
+        except Exception:
+            page.wait_for_timeout(250)
+    return False
 
+
+def check_listing_has_image(page):
+    # Optional: grab listing image src safely //maps.gstatic.com/tactile/pane/default_geocode-1x.png
+    try:
+        image_wrapper = page.locator(".ZKCDEc")
+        image_wrapper_first = image_wrapper.first
+        img = image_wrapper_first.locator("img")
+        img_first = img.first
+        src = img_first.get_attribute("src")
+        if "default_geocode" in src:
+            return False
+        else:
+            return True
+    except Exception:
+        pass
+    return False
+
+def open_pleper_panel(page, lastId):
+    panel = page.locator(".single_listing_info_window").first
+    for _ in range(40):
+        try:
+            page.wait_for_timeout(250)
+            cur_id = panel.get_attribute("id") or ""
+            if cur_id != lastId:
+                return panel, cur_id
+        except Exception:
+            pass
+        page.wait_for_timeout(250)
+    return None, lastId
+
+def scrape_pleper_panel(panel):
+    result = {}
+    # Extract company name (first <strong>)
+    try:
+        company = (panel.locator("strong").first.text_content() or "").strip()
+        if company:
+            result["gbp_company"] = company
+    except Exception:
+        pass
+
+    # Extract verification from <small>
+    try:
+        small_txt = (panel.locator("small").first.text_content() or "").strip().lower()
+        if "not verified" in small_txt:
+            result["gbp_is_verified"] = False
+        elif "verified" in small_txt:
+            result["gbp_is_verified"] = True
+    except Exception:
+        pass
+
+    # Parse table rows using count()/nth()
+    try:
+        result["attributes"] = -1
+        rows = panel.locator("tr")
+        rc = rows.count()
+        for idx in range(1, rc):  # skip header row at 0
+            row = rows.nth(idx)
+            tds = row.locator("td")
+            if tds.count() < 2:
+                continue
+            key = (tds.nth(0).text_content() or "").strip()
+            val_txt = (tds.nth(1).text_content() or "").strip()
+            if key.startswith("Categories"):
+                result["categories"] = [p.strip() for p in val_txt.split(",") if p.strip()]
+            elif key.startswith("Place ID"):
+                result["place_id"] = val_txt
+            elif key.startswith("CID"):
+                result["CID"] = val_txt
+            elif key.startswith("Business Profile ID"):
+                result["business_profile_id"] = val_txt
+            elif key.startswith("Coordinates"):
+                try:
+                    parts = [p.strip() for p in val_txt.split(",")]
+                    if len(parts) >= 2:
+                        result["coordinates"] = [float(parts[0]), float(parts[1])]
+                except Exception:
+                    pass
+            elif key.startswith("KG ID"):
+                result["kg_id"] = "https://www.google.com/search?kgmid=" + val_txt
+            elif key.startswith("Attributes"):
+                try:
+                    result["attributes"] = int(val_txt.split()[0])
+                except Exception:
+                    result["attributes"] = -1
+    except Exception:
+        pass
+
+    return result
+
+
+def scrape_listing(page, item, lastId):
+    result = {}
+    result["gbp_has_image"] = True
+    if not click_on_the_listing(item): return result, lastId
+
+    page.wait_for_timeout(1000)
+
+    panel, lastId = open_pleper_panel(page, lastId)
+    if not panel is None:
+        result = {**scrape_pleper_panel(panel), **result}
+
+    result["gbp_has_image"] = check_listing_has_image(page)
+
+    return result, lastId
+        
 def process_query(url: str, source_file: str, cfg: ScrapeConfig, context: BrowserContext) -> Tuple[str, List[Dict]]:
     """Navigate to the URL, scroll (stub), and extract real data.
     Returns (slug, rows)
     """
     page = context.new_page()
     page.set_default_timeout(30000)
+    lastId = None
     try:
         page.goto(url, timeout=cfg.navigation_timeout_ms)
         scroll_results_stub(page, cfg)
 
         html = page.content()
         rows = extract_businesses_from_html(html, source_file)
+
+        try:
+            locator = page.locator("div.Nv2PK")
+            count = locator.count()
+
+            for i in range(count):
+                item = locator.nth(i)
+                scraped_item, lastId = scrape_listing(page, item, lastId)
+                rows[i] = {**rows[i], **scraped_item}
+                
+        except Exception:
+            pass
         slug = query_to_human_slug(url)
         return slug, rows
     finally:

@@ -26,7 +26,8 @@ from playwright.sync_api import sync_playwright
 url = "https://www.denverweldingfab.com/"
 # allows http is not working correctly
 
-def performance_metrics(url, page):
+def performance_metrics(row, page):
+    url = row.get("query_url", "").strip()
     http_url = url.replace("https://", "http://")
     domain = http_url.split("/")[2]
     base_url = f"http://{domain}"
@@ -56,6 +57,14 @@ def performance_metrics(url, page):
     h1 = has_h1(soup)
     favicon = has_favicon(soup)
     html5 = is_html5(requests_html)
+    phoneStartsWithPlus = row.get("phone", "").startswith("+")
+    hasPhone = bool(row.get("phone", ""))
+    hasAddress = bool(row.get("address", ""))
+    gbp_is_verified = row.get("gbp_is_verified", False)
+    n_categories = len(row.get("categories", []))
+    gbp_has_image = row.get("gbp_has_image", False)
+    attributes = row.get("attributes", -1)
+
     page.close()
 
     return {
@@ -76,7 +85,14 @@ def performance_metrics(url, page):
         "metaDescription": metaDescription,
         "h1": h1,
         "favicon": favicon,
-        "html5": html5
+        "html5": html5,
+        "phoneStartsWithPlus": phoneStartsWithPlus,
+        "hasPhone": hasPhone,
+        "hasAddress": hasAddress,
+        "gbp_is_verified": gbp_is_verified,
+        "n_categories": n_categories,
+        "gbp_has_image": gbp_has_image,
+        "attributes": attributes
     }
 
 

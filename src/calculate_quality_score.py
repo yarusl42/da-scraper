@@ -1,20 +1,44 @@
 def calculate_quality_score(metrics):
     score = 0
     reasons = []
+    attributes = metrics.get("attributes", -1)
+    if attributes != -1 and attributes <= 4:
+        score += 30
+        reasons.append((f"Few GBP attributes ({attributes})", 30))
+
+    if not metrics.get("gbp_has_image", False):
+        score += 100
+        reasons.append(("No image in GBP", 100))
     
-    if not metrics.get("gbp_is_verified", True):
+    if metrics.get("n_categories", 0) == 1:
+        score += 30
+        reasons.append(("Only one category", 30))
+
+    gbp_is_verified = metrics.get("gbp_is_verified", True)
+    if not gbp_is_verified:
         score += 120
         reasons.append(("Unverified Google Business Profile", 120))
 
-    gbp_categories = metrics.get("gbp_categories", [])
-    if len(gbp_categories) == 1:
+    if not metrics.get("hasPhone", False):
+        score += 10
+        reasons.append(("No phone number", 10))
+    elif metrics.get("phoneStartsWithPlus", False):
+        score += 10
+        reasons.append(("Phone number starts with +", 10))
+    
+    if not metrics.get("hasAddress", False):
         score += 30
-        reasons.append((f"Only one GBP category ({gbp_categories[0]})", 30))
+        reasons.append(("No address", 30))
 
     gbp_attributes = metrics.get("gbp_amount_of_attributes", 0)
     if gbp_attributes <= 1:
         score += 40
         reasons.append((f"Few GBP attributes ({gbp_attributes})", 40))
+
+    gbp_has_image = metrics.get("gbp_has_image", False)
+    if not gbp_has_image:
+        score += 40
+        reasons.append(("No image in GBP", 40))
 
     if not metrics.get("has_website", True):
         score += 120
@@ -56,7 +80,7 @@ def calculate_quality_score(metrics):
             reasons.append(("No meta description", 20))
 
         if not metrics.get("h1", True):
-            score += 30  # doubled from 15
+            score += 30
             reasons.append(("No H1 tag", 30))
 
         if not metrics.get("analytics", True):
